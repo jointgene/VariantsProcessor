@@ -256,7 +256,7 @@ sub split_sample_tag{
 	#
 	my %hash=();
 	foreach my $rg (@$rg_arr){
-		next if($$samples{$rg} eq ".");
+		next if($$samples{$rg}=~m"^\.");
 		my @arr = split /:/, $$samples{$rg};
 		for(my $i=0;$i<scalar @tag;$i++){
 			$hash{$rg}{$tag[$i]}=$arr[$i];
