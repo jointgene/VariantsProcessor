@@ -21,44 +21,68 @@ my $file_out = shift @ARGV;
 # read configure file
 my %CONF = &read_conf($file_conf);
 
-# check and over
-die "Configure file is error: Progeny is missing\n" if(not exists $CONF{'Progeny'});
+# keys of configure file
+# progeny       = sampleNames # required
+# lower-dp      = 7    # depth of each sample, default is 7
+# upper-dp      = 200 # not required
+# lower-af      = 0.2  # swith 1
+# upper-af      = 0.8  # swith 1
+# mis-num       = 0    # default is 0, (0 mean not allow missing)
+# het-num       = 1    # default is the number of all samples
+# lower-avgaf   = 0.25 # swith 2
+# upper-avgaf   = 0.75 # swith 2
+# swith 1 or swith 2, at least one is required,
+
+# check required parameters
+die "Configure file is error: Progeny is missing\n" if(not exists $CONF{'progeny'});
 
 # global set: for special experiment
-my @PROGENY = split /\s*,\s*/, $CONF{'Progeny'};
+my @PROGENY = split /\s*,\s*/, $CONF{'progeny'};
 
 # global options
 # DP
-#my $DP_HET_TOTAL = 15; #
-#$DP_HET_TOTAL = $CONF{'HET.TOTAL.DP'} if(exists $CONF{'HET.TOTAL.DP'});
 my $DP_HET_EACH = 7;
-$DP_HET_EACH =  $CONF{'HET.EACH.DP'} if(exists $CONF{'HET.EACH.DP'});
-# AF
-my $AF_HET_LOWER = 0.2;
-$AF_HET_LOWER = $CONF{'AF.LOWER'} if(exists $CONF{'AF.LOWER'});
-my $AF_HET_UPPER = 0.8;
-$AF_HET_UPPER = $CONF{'AF.UPPER'} if(exists $CONF{'AF.UPPER'});
+$DP_HET_EACH = $CONF{'lower-dp'} if(exists $CONF{'lower-dp'});
+my $DP_HET_EACH_UPPER = $CONF{'upper-dp'} if(exists $CONF{'upper-dp'});
+
 # Mis
-my $MIS_HET_SAMPLE = 1;
-$MIS_HET_SAMPLE = $CONF{'HET.Mis'} if(exists $CONF{'HET.Mis'});
+my $MIS_HET_SAMPLE = 0;
+$MIS_HET_SAMPLE = $CONF{'mis-num'} if(exists $CONF{'mis-num'});
+
+# swith 1
+# AF
+my $AF_HET_LOWER = $CONF{'lower-af'} if(exists $CONF{'lower-af'});
+my $AF_HET_UPPER = $CONF{'upper-af'} if(exists $CONF{'upper-af'});
 # Fit
 my $num_progeny = scalar @PROGENY;
 my $FIT_HET_SAMPLE = $num_progeny;
-$FIT_HET_SAMPLE = $CONF{'HET.Fit'} if(exists $CONF{'HET.Fit'});
+$FIT_HET_SAMPLE = $CONF{'het-num'} if(exists $CONF{'het-num'});
 
-#
-say "conditions:";
-#say "DP_HET_TOTAL   = $DP_HET_TOTAL";
-say "DP_HET_EACH    = $DP_HET_EACH";
-say "AF_HET_LOWER   = $AF_HET_LOWER";
-say "AF_HET_UPPER   = $AF_HET_UPPER";
-say "MIS_HET_SAMPLE = $MIS_HET_SAMPLE";
-say "FIT_HET_SAMPLE = $FIT_HET_SAMPLE";
-say "";
+# swith 2
+# AF
+my $AvgAF_HET_LOWER = $CONF{'lower-avgaf'} if(exists $CONF{'lower-avgaf'});
+my $AvgAF_HET_UPPER = $CONF{'upper-avgaf'} if(exists $CONF{'upper-avgaf'});
+
+# if both are not defined, swith 2 will be open
+$AvgAF_HET_LOWER = 0.3 if(not defined $AF_HET_LOWER and not defined $AvgAF_HET_LOWER);
+$AvgAF_HET_UPPER = 0.7 if(not defined $AF_HET_UPPER and not defined $AvgAF_HET_UPPER);
 
 #
 say "Progeny samples:";
 say join ", ", @PROGENY;
+say "";
+
+#
+say "conditions:";
+say "DP_HET_EACH       = $DP_HET_EACH";
+say "DP_HET_EACH_UPPER = $DP_HET_EACH_UPPER" if(defined $DP_HET_EACH_UPPER);
+say "MIS_HET_SAMPLE    = $MIS_HET_SAMPLE";
+say "AF_HET_LOWER      = $AF_HET_LOWER"    if(defined $AF_HET_LOWER);
+say "AF_HET_UPPER      = $AF_HET_UPPER"    if(defined $AF_HET_UPPER);
+say "FIT_HET_SAMPLE    = $FIT_HET_SAMPLE"  if(defined $AF_HET_LOWER and defined $AF_HET_UPPER);
+say "AvgAF_HET_LOWER   = $AvgAF_HET_LOWER" if(defined $AvgAF_HET_LOWER);
+say "AvgAF_HET_UPPER   = $AvgAF_HET_UPPER" if(defined $AvgAF_HET_UPPER);
+say "";
 
 ####################################################
 # main, read and write
@@ -101,17 +125,33 @@ while(<FILE>){
 	# check allele
 	next if($allele eq "NA");
 	# condition 2
-	my $het = 0;
-	my $mis = 0;
+	my $het   = 0;
+	my $mis   = 0;
+	my $sumAF = 0;
+	my $noMis = 0;
 	foreach my $rg (@PROGENY){
 		do {$mis++; next;} if(not exists $sam_tag{$rg});
 		do {$mis++; next;} if($sam_tag{$rg}{'DP'} < $DP_HET_EACH);
-		next if($sam_frq{$rg}{$allele} < $AF_HET_LOWER);
-		next if($sam_frq{$rg}{$allele} > $AF_HET_UPPER);
+		do {$mis++; next;} if(defined $DP_HET_EACH_UPPER and $sam_tag{$rg}{'DP'} > $DP_HET_EACH_UPPER);
+		$sumAF+= $sam_frq{$rg}{$allele};
+		$noMis++;
+		#
+		next if(defined $AF_HET_LOWER and $sam_frq{$rg}{$allele} < $AF_HET_LOWER);
+		next if(defined $AF_HET_UPPER and $sam_frq{$rg}{$allele} > $AF_HET_UPPER);
 		$het++;
 	}
+	# about missing data
 	next if($mis > $MIS_HET_SAMPLE);
-	next if($het < $FIT_HET_SAMPLE);
+
+	# swith 1
+	next if(defined $AF_HET_LOWER and defined $AF_HET_UPPER and $het < $FIT_HET_SAMPLE);
+
+	# swith 2
+	next if($noMis == 0);	
+	my $avgAF = $sumAF / $noMis;
+	next if(defined $AvgAF_HET_LOWER and defined $AvgAF_HET_UPPER and $avgAF < $AvgAF_HET_LOWER);
+	next if(defined $AvgAF_HET_LOWER and defined $AvgAF_HET_UPPER and $avgAF > $AvgAF_HET_UPPER);
+
 	# output
 	print OUT "$_\n";
 }
@@ -312,8 +352,16 @@ sub get_allele_counts{
 	foreach my $rg (@$rg_arr){
 		next if(not exists $$sam_tag{$rg});
 		my @cov = ();
-		push @cov, $$sam_tag{$rg}{'RO'};
-		push @cov, (split /,/, $$sam_tag{$rg}{'AO'});
+		# from GATK calling
+		if(exists $$sam_tag{$rg}{'AD'}){ 
+			push @cov, (split /,/, $$sam_tag{$rg}{'AD'});
+		}
+		# from freebayes calling
+		elsif(exists $$sam_tag{$rg}{'RO'} and exists $$sam_tag{$rg}{'AO'}){
+			push @cov, $$sam_tag{$rg}{'RO'};
+			push @cov, (split /,/, $$sam_tag{$rg}{'AO'});
+		}
+		# save in a hash
 		for(my $i=0;$i<scalar @cov;$i++){
 			$hash{$rg}{$i}=$cov[$i];
 		}

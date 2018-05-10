@@ -319,8 +319,16 @@ sub get_allele_counts{
 	foreach my $rg (@$rg_arr){
 		next if(not exists $$sam_tag{$rg});
 		my @cov = ();
-		push @cov, $$sam_tag{$rg}{'RO'};
-		push @cov, (split /,/, $$sam_tag{$rg}{'AO'});
+		# from GATK calling
+		if(exists $$sam_tag{$rg}{'AD'}){ 
+			push @cov, (split /,/, $$sam_tag{$rg}{'AD'});
+		}
+		# from freebayes calling
+		elsif(exists $$sam_tag{$rg}{'RO'} and exists $$sam_tag{$rg}{'AO'}){
+			push @cov, $$sam_tag{$rg}{'RO'};
+			push @cov, (split /,/, $$sam_tag{$rg}{'AO'});
+		}
+		# save in a hash
 		for(my $i=0;$i<scalar @cov;$i++){
 			$hash{$rg}{$i}=$cov[$i];
 		}
