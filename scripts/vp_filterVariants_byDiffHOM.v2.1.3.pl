@@ -55,7 +55,7 @@ while(<FILE>){
 		@RG = @samples;
 		say "samples = ". join ", ", @RG;
 		#
-		@POPULATION = @RG;
+		@POPULATION = @RG if(scalar @POPULATION == 0);
 		# check
 		my %samples=&assign_samples(\@samples);
 		die "Configure file error!!!\n" if( &check_samples(\%samples, \@POPULATION) );
