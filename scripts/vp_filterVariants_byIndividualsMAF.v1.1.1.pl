@@ -73,7 +73,7 @@ while(<FILE>){
 	# read vcf lines
 	my ($chr, $loc, $id, $ref, $alt, $qual, $flt, $inf, $tag, @samples) = (split /\t/, $_);
 	my %samples = &assign_samples(\@samples);
-	my %sam_tag = &split_sample_tag($tag, \%samples, \@POPULATION);
+	my %sam_tag = &split_sample_tag($tag, \%samples, \@POPULATION) if($tag and @POPULATION);
 
 	# picking markers by the following conditions
 	my $maf = &calculate_individuals_maf(\%sam_tag, \@POPULATION);

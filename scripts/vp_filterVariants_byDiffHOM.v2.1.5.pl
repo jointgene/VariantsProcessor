@@ -70,9 +70,9 @@ while(<FILE>){
 	# read vcf lines
 	my ($chr, $loc, $id, $ref, $alt, $qual, $flt, $inf, $tag, @samples) = (split /\t/, $_);
 	my %samples = &assign_samples(\@samples);
-	my %sam_tag = &split_sample_tag($tag, \%samples, \@RG);
-	my %sam_cov = &get_allele_counts(\%sam_tag, \@RG);
-	my %sam_frq = &cal_allele_freq(\%sam_tag, \%sam_cov, \@RG);
+	my %sam_tag = &split_sample_tag($tag, \%samples, \@POPULATION) if($tag and @POPULATION);
+	my %sam_cov = &get_allele_counts(\%sam_tag, \@POPULATION);
+	my %sam_frq = &cal_allele_freq(\%sam_tag, \%sam_cov, \@POPULATION);
 
 	# picking markers by the following conditions
 	# condition 1
