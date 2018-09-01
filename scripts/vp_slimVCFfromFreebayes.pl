@@ -47,9 +47,9 @@ sub slim_info{
 	# CIGAR
 	my $cigar = $1 if($$inf=~m/\bCIGAR=(\S+?)[;\t]/);
 	# type
-	my $type = $1 if($$inf=~m/\bTYPE=(\S+?)[;\t]/);
+	#my $type = $1 if($$inf=~m/\bTYPE=(\S+?)[;\t]/);
 	#
-	my $new="DP=$dp;RO=$ro;AO=$ao;CIGAR=$cigar;TYPE=$type;";	
+	my $new="DP=$dp;RO=$ro;AO=$ao;CIGAR=$cigar;";	
 	return $new;
 }
 
