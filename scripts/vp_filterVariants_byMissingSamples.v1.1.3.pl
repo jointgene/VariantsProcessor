@@ -62,7 +62,7 @@ while(<FILE>){
 	if($_=~m/^#(.*)/){
 		my ($chr, $loc, $id, $ref, $alt, $qual, $flt, $inf, $tag, @samples) = (split /\t/, $_);
 		@RG = @samples;
-		say "samples = ". join ", ", @RG;
+		#say "samples = ". join ", ", @RG;
 		#
 		@POPULATION = @RG if(scalar @POPULATION == 0);
 		$TOTAL_SIZE = scalar @POPULATION;
