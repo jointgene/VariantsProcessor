@@ -19,6 +19,7 @@ my $file_vcf = shift @ARGV;
 # global variable
 my $CK_CHR;
 my $MK_POS;
+my $COUNT;
 
 #
 open IN, $file_vcf or die "";
@@ -34,13 +35,16 @@ while(<IN>){
 	if(not defined $CK_CHR){
 		print "$chr\t$pos";
 		$CK_CHR = $chr;
+		$COUNT = 0;
 	} elsif($CK_CHR ne $chr){
-		print "\t$MK_POS\n";
+		print "\t$MK_POS\t$COUNT\n";
 		$CK_CHR = $chr;
+		$COUNT = 0;
 		print "$chr\t$pos";		
 	}
 	$MK_POS = $pos;
+	$COUNT++;
 }
-print "\t$MK_POS\n";
+print "\t$MK_POS\t$COUNT\n";
 close IN;
 
