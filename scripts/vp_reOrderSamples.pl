@@ -82,11 +82,6 @@ while(<IN>){
 	print OUT "$chr\t$loc\t$id\t$ref\t$alt\t$qual\t$flt\t$inf\t$tag\t$str\n";
 }
 
-# process vcf lines
-while(<IN>){
-	chomp ;
-	print OUT "$_\n";
-}
 close IN;
 close OUT;
 
