@@ -78,22 +78,22 @@ $P1GT_RIGHT =  $CONF{'p1-hom-right'} if(exists $CONF{'p1-hom-right'});
 $P2GT_RIGHT =  $CONF{'p2-hom-right'} if(exists $CONF{'p2-hom-right'});
 
 #
-say "conditions:";
-say "DP_PAR1_TOTAL     = $DP_PAR1_TOTAL"       if(exists $CONF{'p1-lower-dp'});
-say "DP_PAR2_TOTAL     = $DP_PAR2_TOTAL"       if(exists $CONF{'p2-lower-dp'});
-say "DP_PAR1_UPPER     = $DP_PAR1_UPPER"       if(defined $DP_PAR1_UPPER);
-say "DP_PAR2_UPPER     = $DP_PAR2_UPPER"       if(defined $DP_PAR2_UPPER);
-say "TOTAL_DEPTH       = $TOTAL_DEPTH"         if(defined $TOTAL_DEPTH);
-say "TOTAL_DEPTH_UPPER = $TOTAL_DEPTH_UPPER"   if(defined $TOTAL_DEPTH_UPPER);
+#say "conditions:";
+#say "DP_PAR1_TOTAL     = $DP_PAR1_TOTAL"       if(exists $CONF{'p1-lower-dp'});
+#say "DP_PAR2_TOTAL     = $DP_PAR2_TOTAL"       if(exists $CONF{'p2-lower-dp'});
+#say "DP_PAR1_UPPER     = $DP_PAR1_UPPER"       if(defined $DP_PAR1_UPPER);
+#say "DP_PAR2_UPPER     = $DP_PAR2_UPPER"       if(defined $DP_PAR2_UPPER);
+#say "TOTAL_DEPTH       = $TOTAL_DEPTH"         if(defined $TOTAL_DEPTH);
+#say "TOTAL_DEPTH_UPPER = $TOTAL_DEPTH_UPPER"   if(defined $TOTAL_DEPTH_UPPER);
 
-say "P1.GT_WRONG = $P1GT_WRONG";
-say "P2.GT_WRONG = $P2GT_WRONG";
-say "P1.GT_RIGHT = $P1GT_RIGHT";
-say "P2.GT_RIGHT = $P2GT_RIGHT";
+#say "P1.GT_WRONG = $P1GT_WRONG";
+#say "P2.GT_WRONG = $P2GT_WRONG";
+#say "P1.GT_RIGHT = $P1GT_RIGHT";
+#say "P2.GT_RIGHT = $P2GT_RIGHT";
 
-say "Parent1 samples = ". join ", ", @PARENT1 if(exists $CONF{'parent1'});
-say "Parent2 samples = ". join ", ", @PARENT2 if(exists $CONF{'parent2'});
-say "";
+#say "Parent1 samples = ". join ", ", @PARENT1 if(exists $CONF{'parent1'});
+#say "Parent2 samples = ". join ", ", @PARENT2 if(exists $CONF{'parent2'});
+#say "";
 
 ####################################################
 # main, read and write
@@ -115,7 +115,7 @@ while(<FILE>){
 	if($_=~m/^#(.*)/){
 		my ($chr,$loc,$id,$ref,$alt,$qual,$flt,$inf,$tag,@samples) = (split /\t/, $_);
 		@RG = @samples;
-		say "samples = ". join ", ", @RG;
+		#say "samples = ". join ", ", @RG;
 		# check
 		my %samples = &assign_samples(\@samples);
 		die "error sample name!!!\n\tParent1 missing.\n" if( &check_samples(\%samples, \@PARENT1) );

@@ -1,7 +1,8 @@
 #!/usr/bin/perl
 # pick proper marker
 # biotang
-# 2016.8.1
+# 2019.5.4
+# version: 1.1.3
 use strict;
 use warnings;
 use File::Basename;
@@ -77,7 +78,7 @@ while(<FILE>){
 
 	# picking markers by the following conditions
 	my @allele_freq = &calculate_individuals_af(\%sam_tag, \@POPULATION);
-	next if(scalar @allele_freq < 2);
+	next if(scalar @allele_freq <= 1);
 	my $mk = 0;
 	for(my $i=1;$i<scalar @allele_freq;$i++){
 		$mk = 1 if($allele_freq[$i] > $CONF{'individuals-aaf'});
@@ -97,7 +98,7 @@ sub read_conf{
 	# read configure file
 	my $file_conf = shift @_;
 	my %CONF = ();
-	print "read $file_conf\n";
+	#print "read $file_conf\n";
 	open CONF, "<", $file_conf or die "";
 	while(<CONF>){
 		chomp ;
@@ -131,13 +132,14 @@ sub calculate_individuals_af{
 		#
 		$individual_number++;
 		#
-		my @gt = split /\//, $$sam_tag{$sample}{'GT'};
+		my @gt = split /[\/\|]/, $$sam_tag{$sample}{'GT'};
 		foreach my $a (@gt){
 			$allele_counts{$a} += 0.5;
 		}
 	}
 	my @allele_freq = ();
-	foreach my $counts (values %allele_counts){
+	foreach my $gt (sort {$a <=> $b} keys %allele_counts){
+		my $counts = $allele_counts{$gt};
 		my $freq = 0;
 		$freq = $counts / $individual_number if($individual_number); 
 		push @allele_freq, $freq;

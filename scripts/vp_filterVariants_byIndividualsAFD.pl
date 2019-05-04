@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # pick proper marker
 # biotang
-# 2016.8.1
+# 2019.5.4
 # version: 1.1.3
 use strict;
 use warnings;
@@ -24,14 +24,16 @@ my $file_out = shift @ARGV;
 my %CONF = &read_conf($file_conf);
 # example
 #my %CONF = (
-#	"missing-rate"      => 0.3,
+#	"individuals-afd"   => 0.5,
 #	"lower-dp"          => 3,
-#	"upper-dp"          => 100
+#	"upper-dp"          => 100,
 #);
 
 # global set: for special experiment
 my @POPULATION = (); # default: include all samples in this population
 @POPULATION = split /\s*,\s*/, $CONF{'population'} if(exists $CONF{'population'});
+my @POPULATION2 = (); # default: include all samples in this population
+@POPULATION2 = split /\s*,\s*/, $CONF{'population2'} if(exists $CONF{'population2'});
 
 #
 my $LOWER_DP;
@@ -39,15 +41,16 @@ my $UPPER_DP;
 $LOWER_DP = $CONF{'lower-dp'} if(exists $CONF{'lower-dp'});
 $UPPER_DP = $CONF{'upper-dp'} if(exists $CONF{'upper-dp'});
 
-# required
-die "Configure Error: not define 'missing-rate'\n" if(not exists $CONF{'missing-rate'});
+# check required parameters
+die "Configure Error: 'individuals-afd' not defined\n" if(not exists $CONF{'individuals-afd'});
+die "Configure Error: 'population' not defined\n" if(not exists $CONF{'population'});
+die "Configure Error: 'population2' not defined\n" if(not exists $CONF{'population2'});
 
 ####################################################
 # main, read and write
 ####################################################
 # global var
 my @RG=();
-my $TOTAL_SIZE = 0;
 
 # read
 open FILE, $file_vcf or die "";
@@ -64,12 +67,10 @@ while(<FILE>){
 		my ($chr, $loc, $id, $ref, $alt, $qual, $flt, $inf, $tag, @samples) = (split /\t/, $_);
 		@RG = @samples;
 		#say "samples = ". join ", ", @RG;
-		#
-		@POPULATION = @RG if(scalar @POPULATION == 0);
-		$TOTAL_SIZE = scalar @POPULATION;
 		# check
 		my %samples = &assign_samples(\@samples);
-		die "Configure file error!!!\n" if( &check_samples(\%samples, \@POPULATION) );
+		die "Sample error!!!\n" if( &check_samples(\%samples, \@POPULATION) );
+		die "Sample error!!!\n" if( &check_samples(\%samples, \@POPULATION2) );
 		# write out
 		print OUT "$_\n";
 		next;
@@ -77,21 +78,32 @@ while(<FILE>){
 	# read vcf lines
 	my ($chr, $loc, $id, $ref, $alt, $qual, $flt, $inf, $tag, @samples) = (split /\t/, $_);
 	my %samples = &assign_samples(\@samples);
-	my %sam_tag = &split_sample_tag($tag, \%samples, \@POPULATION);
+	my %sam_tag = &split_sample_tag($tag, \%samples, \@RG) if($tag and @RG);
 
 	# picking markers by the following conditions
-	my $missed_number = 0;
-	foreach my $sample (@POPULATION){
-		do {$missed_number++; next} if(not exists $sam_tag{$sample});
-		do {$missed_number++; next} if(defined $LOWER_DP and $sam_tag{$sample}{'DP'} < $LOWER_DP);
-		do {$missed_number++; next} if(defined $UPPER_DP and $sam_tag{$sample}{'DP'} > $UPPER_DP);
+	my @alt = split /,/, $alt;
+	my @allele = ($ref, @alt);
+	my $num_allele = scalar @allele;
+	my %allele_freq  = &calculate_individuals_af(\%sam_tag, \@POPULATION, $num_allele);
+	my %allele_freq2 = &calculate_individuals_af(\%sam_tag, \@POPULATION2, $num_allele);
+	#
+	my $mk = 0;
+	#my @frq1 = ();
+	#my @frq2 = ();
+	for(my $i=0;$i<$num_allele;$i++){
+		$mk = 1 if( abs($allele_freq{$i} - $allele_freq2{$i}) > $CONF{'individuals-afd'});
+		#push @frq1, $allele_freq{$i};
+		#push @frq2, $allele_freq2{$i};
 	}
-	my $missing_rate = 0;
-	$missing_rate = $missed_number / $TOTAL_SIZE if($TOTAL_SIZE);
-	next if($missing_rate >= $CONF{'missing-rate'});
+	next if($mk == 0);
 
 	# output
 	print OUT "$_\n";
+
+	#
+	#my $str_frq1 = join ",", @frq1;
+	#my $str_frq2 = join ",", @frq2;
+	#print "$chr\t$loc\t$ref\t$alt\t".$str_frq1."\t".$str_frq2."\n";
 }
 close FILE;
 close OUT;
@@ -119,6 +131,44 @@ sub read_conf{
 	}
 	close CONF;
 	return %CONF;
+}
+
+####################################################
+# functions: 
+####################################################
+sub calculate_individuals_af{
+	my $sam_tag = shift @_;
+	my $rg_arr  = shift @_;
+	my $number  = shift @_;
+	#
+	my $individual_number = 0;
+	my %allele_counts = ();
+	#
+	for(my $i=0;$i<$number;$i++){
+		$allele_counts{$i}=0;
+	}
+	#
+	foreach my $sample (@$rg_arr){
+		next if(not exists $$sam_tag{$sample} or not exists $$sam_tag{$sample}{'GT'});
+		next if(defined $LOWER_DP and $$sam_tag{$sample}{'DP'} < $LOWER_DP);
+		next if(defined $UPPER_DP and $$sam_tag{$sample}{'DP'} > $UPPER_DP);
+		#
+		$individual_number++;
+		#
+		my @gt = split /[\/\|]/, $$sam_tag{$sample}{'GT'};
+		foreach my $a (@gt){
+			$allele_counts{$a} += 0.5;
+		}
+	}
+	#
+	my %allele_freq = ();
+	foreach my $gt (sort {$a <=> $b} keys %allele_counts){
+		my $counts = $allele_counts{$gt};
+		my $freq = 0;
+		$freq = $counts / $individual_number if($individual_number); 
+		$allele_freq{$gt} = $freq;
+	}
+	return %allele_freq;
 }
 
 ####################################################
